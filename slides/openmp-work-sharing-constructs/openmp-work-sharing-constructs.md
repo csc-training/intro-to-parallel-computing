@@ -20,20 +20,32 @@ CSC Training, 2017-08
 # Loop construct
 
 - Directive instructing compiler to share the work of a loop
-- C/C++ (for-loops only):  ```#pragma omp for [clauses]```
-- Fortran: ```!$omp do [clauses]```
+- C/C++ (for-loops only):  **```#pragma omp for [clauses]```**
+- Fortran: **```!$omp do [clauses]```**
     - The construct must followed by a loop construct
+        - in C/C++ limited only to for-loops
     - It must reside inside a parallel region
     - Combined construct with ```omp parallel```: 
-         - C/C++: ```#pragma omp parallel for```
-         - Fortran: ```!$omp parallel do```
+         - C/C++: **```#pragma omp parallel for```**
+         - Fortran: **```!$omp parallel do```**
 - The loop index is private by default
 - Work sharing can be adjusted with the  schedule clause
 
 ---
 
 
-# Loop constructs
+# Loop construct
+<div class="column">
+### C/C++ 
+
+```c
+#pragma omp parallel shared(x,y,z) private(i)
+{
+#pragma omp for
+   for (i=0; i < n ; i++)
+      z[i] = x[i] + y[i]
+}
+```
 
 ### Fortran
 ```fortran
@@ -47,18 +59,12 @@ CSC Training, 2017-08
 
 ```
 
-### C/C++ 
+</div>
 
-
-```c
-#pragma omp parallel shared(x,y,z) private(i)
-{
-#pragma omp for
-   for (i=0; i < n ; i++)
-      z[i] = x[i] + y[i]
-}
-```
-
+<div class="column">
+In C/C++ only for-loops with a “canonical” form, such as here, can be used. Since OpenMP 3.0 one can also
+use iterator based loops in C++ for random access containers (e.g. std::vector).
+</div>
 
 
 ---
@@ -89,7 +95,7 @@ CSC Training, 2017-08
 
 ---
 
-# Loop constructs
+# Loop scheduling clause
 
 ### Fortran
 ```fortran
@@ -118,12 +124,36 @@ CSC Training, 2017-08
 
 ---
 
+# Lastprivate data-sharing clause
+
+**```lastprivate(list)```**
+
+- Private variable where the original variable is updated with the value from the “last” parallel iteration step or section
+- Variable can be both firstprivate and lastprivate
+
+```c
+int n = 10;
+int a, b, i;
+#pragma omp parallel for private(i,a) lastprivate(b)
+for (i = 0; i < n; i++) {
+a = i;
+b = i;
+}
+printf("private int is %d, lastprivate int is %d\n", a, b);
+```
+
+```
+>./test
+>private int is 32765, lastprivate int is 9
+```
+
+---
 
 # Workshare directive (Fortran only)
 
 - The workshare directive divides the execution of the enclosed structured block into separate units of work parallelized over threads
     - Array assignments, FORALL and WHERE statements etc.
-
+    - Note that performance may be bad in some compiler, in particular with Intel
 
 ### Fortran
 ```fortran
@@ -137,10 +167,6 @@ real :: a(n,n), b(n,n), c(n,n) d(n,n)
 !$omp end parallel
 
 ```
----
-
-
-# Section: Reductions (to be replaced by section layout)
 
 
 ---
@@ -148,8 +174,6 @@ real :: a(n,n), b(n,n), c(n,n) d(n,n)
 # Race condition
 
 - Race conditions take place when multiple threads read and write a variable simultaneously
-- Random results depending on the order the threads access asum
-- We need some mechanism to control the access
 
 ```fortran
 asum = 0.0d0
@@ -160,15 +184,27 @@ end do
 !$omp end parallel do
 ```
 
+- Random results depending on the order the threads access ```asum```
+- We need some mechanism to control the access
+
+---
+
+# Race condition: example
+
+![](img/race-condition.svg){width=80%}
 
 ---
 
 # Reductions
 
 - Summing elements of array is an example of reduction operation
-- OpenMP provides support for common reductions within parallel regions and loops with the ```reduction``` clause
 
-$S=\sum_{j=1}^{N}A_j=\sum_{j=1}^{\frac{N}{2}}A_j+\sum_{j=\frac{N}{2}+1}^{N}A_j=B_1+B_2=\sum_{j=1}^{2}B_j$
+$$\begin{eqnarray} 
+S &=& \sum_{j=1}^{N}A_j = \sum_{j=1}^{\frac{N}{2}}A_j+\sum_{j=\frac{N}{2}+1}^{N}A_j \\
+  &=& B_1+B_2 = \sum_{j=1}^{2}B_j
+\end{eqnarray}$$
+
+- OpenMP provides support for common reductions within parallel regions and loops with the ```reduction``` clause
 
 ---
 
